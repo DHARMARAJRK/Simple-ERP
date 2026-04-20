@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DMR SUNDEEP GROUP</title>
+</head>
+<body>
+
+<h1>DMR SUNDEEP GROUP</h1>
+
+<h2>Order</h2>
+<input id="name" placeholder="Name"><br>
+<input id="product" placeholder="Product"><br>
+<input id="qty" placeholder="Quantity"><br>
+<button onclick="order()">Submit</button>
+
+<hr>
+
+<h2>Admin Login</h2>
+<input id="email" placeholder="Email"><br>
+<input id="pass" type="password" placeholder="Password"><br>
+<button onclick="login()">Login</button>
+
+<hr>
+
+<h2>Orders</h2>
+<div id="orders"></div>
+
+<script>
+let token = "";
+
+// Order
+async function order() {
+  await fetch("/order", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      name: name.value,
+      product: product.value,
+      quantity: qty.value
+    })
+  });
+  alert("Order Sent");
+}
+
+// Login
+async function login() {
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      email: email.value,
+      password: pass.value
+    })
+  });
+
+  const data = await res.json();
+  token = data.token;
+
+  loadOrders();
+}
+
+// Load orders
+async function loadOrders() {
+  const res = await fetch("/orders", {
+    headers: { Authorization: token }
+  });
+
+  const data = await res.json();
+
+  orders.innerHTML = data.map(o =>
+    `<p>${o.name} - ${o.product} (${o.quantity})</p>`
+  ).join("");
+}
+</script>
+
+</body>
+</html>
