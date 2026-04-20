@@ -2,74 +2,162 @@
 <html>
 <head>
   <title>DMR SUNDEEP GROUP</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#c40000">
+
+  <style>
+    body { font-family: Arial; text-align: center; padding: 20px; }
+
+    .products {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .card {
+      border: 2px solid #ccc;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .selected {
+      border-color: green;
+      background: #eaffea;
+    }
+
+    img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    input {
+      padding: 15px;
+      width: 90%;
+      margin: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 15px;
+      width: 90%;
+      font-size: 18px;
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
+  </style>
 </head>
+
 <body>
 
-<h1>DMR SUNDEEP GROUP</h1>
+<h2 id="title">Order Meat</h2>
 
-<h2>Order</h2>
-<input id="name" placeholder="Name"><br>
-<input id="product" placeholder="Product"><br>
-<input id="qty" placeholder="Quantity"><br>
-<button onclick="order()">Submit</button>
+<input id="name" placeholder="Your Name"><br>
 
-<hr>
+<button onclick="startVoice()">🎤 Speak Name</button>
 
-<h2>Admin Login</h2>
-<input id="email" placeholder="Email"><br>
-<input id="pass" type="password" placeholder="Password"><br>
-<button onclick="login()">Login</button>
+<h3 id="selectText">Select Product</h3>
 
-<hr>
+<div class="products">
+  <div class="card" onclick="selectProduct(this, 'Chicken')">
+    <img src="chicken.jpg">
+    <p>Chicken</p>
+  </div>
 
-<h2>Orders</h2>
-<div id="orders"></div>
+  <div class="card" onclick="selectProduct(this, 'Mutton')">
+    <img src="mutton.jpg">
+    <p>Mutton</p>
+  </div>
+
+  <div class="card" onclick="selectProduct(this, 'Fish')">
+    <img src="fish.jpg">
+    <p>Fish</p>
+  </div>
+</div>
+
+<input id="qty" placeholder="Quantity (kg)">
+
+<button onclick="sendOrder()">Order via WhatsApp</button>
 
 <script>
-let token = "";
+let selectedProduct = "";
 
-// Order
-async function order() {
-  await fetch("/order", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      name: name.value,
-      product: product.value,
-      quantity: qty.value
-    })
-  });
-  alert("Order Sent");
+// SELECT PRODUCT
+function selectProduct(el, product) {
+  document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
+  el.classList.add("selected");
+  selectedProduct = product;
 }
 
-// Login
-async function login() {
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      email: email.value,
-      password: pass.value
-    })
-  });
+// VOICE INPUT (safe fallback)
+function startVoice() {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert("Voice not supported on this device");
+    return;
+  }
 
-  const data = await res.json();
-  token = data.token;
+  let recognition = new webkitSpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.start();
 
-  loadOrders();
+  recognition.onresult = function(event) {
+    document.getElementById("name").value = event.results[0][0].transcript;
+  };
 }
 
-// Load orders
-async function loadOrders() {
-  const res = await fetch("/orders", {
-    headers: { Authorization: token }
-  });
+// AUTO LANGUAGE
+const lang = navigator.language;
 
-  const data = await res.json();
+if (lang.startsWith("fr")) {
+  document.getElementById("title").innerText = "Commander Viande";
+  document.getElementById("qty").placeholder = "Quantité (kg)";
+  document.getElementById("selectText").innerText = "Choisir le produit";
+}
 
-  orders.innerHTML = data.map(o =>
-    `<p>${o.name} - ${o.product} (${o.quantity})</p>`
-  ).join("");
+// SEND WHATSAPP
+function sendOrder() {
+  let name = document.getElementById("name").value.trim();
+  let qty = document.getElementById("qty").value.trim();
+
+  if (!name) {
+    alert("Enter your name");
+    return;
+  }
+
+  if (!selectedProduct) {
+    alert("Select a product");
+    return;
+  }
+
+  if (!qty) {
+    alert("Enter quantity");
+    return;
+  }
+
+  // ⚠️ Correct format (no 0, no +)
+  let phone = "0705101611";
+
+  let msg = `New Order:
+Name: ${name}
+Product: ${selectedProduct}
+Quantity: ${qty} kg`;
+
+  let url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+
+  window.open(url, "_blank");
+}
+
+// ✅ Service Worker register (PWA)
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/service-worker.js")
+    .then(() => console.log("PWA Ready"))
+    .catch(err => console.log(err));
 }
 </script>
 
